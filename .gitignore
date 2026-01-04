@@ -1,0 +1,24 @@
+# Database
+data.db
+*.db
+
+# Backups
+*.tar.gz
+backup_*
+
+# Claude directory
+.claude/
+
+# Environment files (if any)
+.env
+.env.local
+
+# Dependencies
+node_modules/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
