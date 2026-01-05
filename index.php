@@ -817,7 +817,7 @@ if (count($parts) >= 3) {
                 <label>Payment Method:</label>
                 <button id="paySolBtn">PAY WITH SOL</button>
                 <button id="payTokenBtn">PAY WITH TOKEN</button>
-                <button id="payStripeBtn" style="background: linear-gradient(135deg, #635bff, #5469d4); border: 2px solid #635bff;">PAY WITH CARD 💳</button>
+                <button id="payStripeBtn" style="background: transparent; border: 2px solid #635bff; color: #635bff;">PAY WITH CARD 💳</button>
             </div>
 
             <div id="statusMsg" class="status-msg"></div>
