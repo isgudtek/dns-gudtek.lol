@@ -19,6 +19,9 @@ sol_price_cache.json
 node_modules/
 vendor/
 
+# Distribution system with private keys
+distro/
+
 # System files
 .DS_Store
 Thumbs.db
