@@ -300,7 +300,8 @@ function updatePriceDisplay() {
 
         const tokenValueUsd = calculatedTokenAmount * tokenPrice;
 
-        const stripePrice = Math.max(0.50, solAmount).toFixed(2);
+        // Stripe price converts from SOL value (minimum $0.50)
+        const stripePrice = Math.max(0.50, solValueUsd).toFixed(2);
 
         document.getElementById('priceInfo').innerHTML = `
             <strong>Pricing from:</strong><br>

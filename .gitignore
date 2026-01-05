@@ -13,6 +13,7 @@ backup_*
 .env
 .env.local
 stripe_config.php
+sol_price_cache.json
 
 # Dependencies
 node_modules/

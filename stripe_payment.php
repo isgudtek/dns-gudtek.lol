@@ -54,8 +54,14 @@ function createCheckoutSession() {
     $row = $result->fetchArray();
     $price_sol = floatval($row['value'] ?? 0.025);
 
-    // Convert to USD cents (same numeric value, e.g., 0.025 SOL = $0.025 USD = 3 cents)
-    $price_usd = round($price_sol * 100); // Convert to cents
+    // Fetch live SOL price in USD
+    $sol_price_usd = fetchSolPrice();
+
+    // Calculate USD value based on SOL amount (e.g., 0.025 SOL * $200 = $5.00)
+    $price_usd_dollars = $price_sol * $sol_price_usd;
+
+    // Convert to cents
+    $price_usd = round($price_usd_dollars * 100);
 
     // Minimum charge is $0.50 (50 cents) for Stripe
     if ($price_usd < 50) {
@@ -185,4 +191,52 @@ function verifyPayment() {
         http_response_code(500);
         echo json_encode(['error' => $e->getMessage()]);
     }
+}
+
+/**
+ * Fetch live SOL price in USD from CoinGecko API
+ */
+function fetchSolPrice() {
+    $cache_file = __DIR__ . '/sol_price_cache.json';
+    $cache_duration = 60; // 1 minute cache
+
+    // Check if cache exists and is fresh
+    if (file_exists($cache_file)) {
+        $cache_data = json_decode(file_get_contents($cache_file), true);
+        if ($cache_data && (time() - $cache_data['timestamp']) < $cache_duration) {
+            return $cache_data['price'];
+        }
+    }
+
+    // Fetch fresh price from CoinGecko
+    try {
+        $url = 'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd';
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 3,
+                'user_agent' => 'Mozilla/5.0'
+            ]
+        ]);
+
+        $response = @file_get_contents($url, false, $context);
+        if ($response) {
+            $data = json_decode($response, true);
+            if (isset($data['solana']['usd'])) {
+                $price = floatval($data['solana']['usd']);
+
+                // Cache the price
+                file_put_contents($cache_file, json_encode([
+                    'price' => $price,
+                    'timestamp' => time()
+                ]));
+
+                return $price;
+            }
+        }
+    } catch (\Exception $e) {
+        error_log('Failed to fetch SOL price: ' . $e->getMessage());
+    }
+
+    // Fallback to default price if API fails
+    return 140.0; // Default fallback price
 }
