@@ -297,7 +297,8 @@ function updatePriceDisplay() {
     if (solPrice > 0 && tokenPrice > 0) {
         // Calculate equivalent token amount based on SOL price
         const solValueUsd = solAmount * solPrice;
-        calculatedTokenAmount = Math.floor(solValueUsd / tokenPrice);
+        // Apply 50% discount to token amount
+        calculatedTokenAmount = Math.floor((solValueUsd / tokenPrice) * 0.5);
 
         const tokenValueUsd = calculatedTokenAmount * tokenPrice;
 
