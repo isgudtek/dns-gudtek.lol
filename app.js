@@ -308,7 +308,7 @@ function updatePriceDisplay() {
             <strong>Pricing from:</strong><br>
             ${solAmount} SOL (≈ $${solValueUsd.toFixed(2)} USD)<br>
             <em style="opacity: 0.8; font-size: 0.9rem;">or</em><br>
-            ${calculatedTokenAmount.toLocaleString()} TOKEN (≈ $${tokenValueUsd.toFixed(2)} USD)<br>
+            ${calculatedTokenAmount.toLocaleString()} TOKEN (≈ $${tokenValueUsd.toFixed(2)} USD) <span style="color: #0f0; font-weight: bold;">50% OFF!</span><br>
             <em style="opacity: 0.8; font-size: 0.9rem;">or</em><br>
             <span style="color: #635bff;">$${stripePrice} USD via Card 💳</span>
         `;
@@ -318,7 +318,7 @@ function updatePriceDisplay() {
         const stripePrice = Math.max(0.50, solAmount).toFixed(2);
         document.getElementById('priceInfo').innerHTML = `
             <strong>Pricing from:</strong><br>
-            ${solAmount} SOL or ${tokenAmountConfig} TOKEN<br>
+            ${solAmount} SOL or ${tokenAmountConfig} TOKEN <span style="color: #0f0; font-weight: bold;">50% OFF!</span><br>
             <em style="opacity: 0.8; font-size: 0.9rem;">or</em><br>
             <span style="color: #635bff;">$${stripePrice} USD via Card 💳</span><br>
             <em style="opacity: 0.7; font-size: 0.85rem;">Fetching live prices...</em>
