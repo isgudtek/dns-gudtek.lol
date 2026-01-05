@@ -1,57 +1,147 @@
-# gudtek.lol/is - Solana URL Shortener
+# Solana URL Shortener
 
-A lightweight, decentralized URL shortener built on PHP/Apache with Phantom wallet integration.
+A lightweight, decentralized URL shortener with Phantom wallet integration, enabling paid custom subdomain redirects on the Solana blockchain.
 
 ## Features
 
-- 🔗 Custom subdomain redirects (slug.gudtek.lol)
-- 💰 Payment via Solana (SOL or custom SPL tokens)
-- 🎨 Green CRT aesthetic UI
-- 👛 Phantom wallet integration
-- 🛠️ Admin panel for configuration and moderation
-- 📊 Transaction tracking
-- 💾 SQLite database (no external DB required)
+- Custom subdomain redirects (e.g., `slug.yourdomain.com`)
+- Solana payment integration (SOL or custom SPL tokens)
+- Phantom wallet support
+- Admin panel for configuration and moderation
+- Transaction tracking and history
+- SQLite database (no external database required)
+- Retro CRT-style UI theme
 
-## Files Structure
+## Prerequisites
 
-```
-/var/www/gudtek.lol/is/
-├── index.php           # Main frontend + redirect handler
-├── app.js              # Phantom wallet integration & UI logic
-├── api.php             # Public API endpoints
-├── admin.php           # Admin panel UI
-├── admin_api.php       # Admin API endpoints
-├── init_db.php         # Database initialization script
-├── data.db             # SQLite database (auto-created)
-├── wildcard-gudtek.conf # Apache VirtualHost config
-└── SETUP.md            # This file
-```
+- **Web Server**: Apache 2.4+ with mod_rewrite and mod_headers
+- **PHP**: 7.4+ with SQLite3 extension
+- **SSL Certificate**: Required for Phantom wallet (supports HTTPS only)
+- **Domain**: Wildcard DNS or subdomain setup
+- **Solana Wallet**: Admin wallet address for system configuration
 
-## Setup Instructions
+## Installation
 
-### 1. Database is Already Initialized ✓
-
-The database has been created with:
-- `redirects` table for storing URL mappings
-- `config` table for system settings
-- `transactions` table for payment history
-
-### 2. Configure Apache Wildcard Subdomains
-
-**Option A: If you want this service to handle ALL *.gudtek.lol subdomains:**
+### 1. Clone Repository
 
 ```bash
-# Copy the config to sites-available
-sudo cp wildcard-gudtek.conf /etc/apache2/sites-available/
+cd /var/www
+git clone https://github.com/yourusername/dns-gudtek.lol.git
+cd dns-gudtek.lol
+```
 
-# IMPORTANT: This will conflict with your existing gudtek.lol config
-# You may need to disable the current one or merge the configurations
+Or extract to your web directory (e.g., `/var/www/html/shortener`).
 
-# Enable the new config
-sudo a2ensite wildcard-gudtek.conf
+### 2. Initialize Database
 
-# Enable required Apache modules
-sudo a2enmod rewrite headers
+Run the database initialization script:
+
+```bash
+php init_db.php
+```
+
+This creates `data.db` with the following tables:
+- `redirects` - URL mappings and slug data
+- `config` - System settings and pricing
+- `transactions` - Payment history
+- `messages` - User messages/notifications
+
+### 3. Set File Permissions
+
+Ensure Apache can read/write to the database:
+
+```bash
+sudo chown www-data:www-data data.db
+sudo chmod 664 data.db
+
+# If using a different web server user (e.g., nginx):
+# sudo chown nginx:nginx data.db
+```
+
+### 4. Configure DNS
+
+Choose one of two approaches:
+
+**Option A: Wildcard Subdomain (Recommended)**
+
+Add a wildcard DNS record:
+```
+A    *    your.server.ip.address
+```
+
+This allows any subdomain (e.g., `test.yourdomain.com`, `moon.yourdomain.com`) to route to your server.
+
+**Option B: Specific Subdomain**
+
+Point a specific subdomain to your server:
+```
+A    short       your.server.ip.address
+A    *.short     your.server.ip.address
+```
+
+Then access via `short.yourdomain.com` with redirects at `slug.short.yourdomain.com`.
+
+### 5. Configure Apache
+
+#### Edit VirtualHost Configuration
+
+Update `wildcard-gudtek.conf` or create a new config file:
+
+```apache
+<VirtualHost *:443>
+    ServerName short.yourdomain.com
+    ServerAlias *.yourdomain.com
+
+    DocumentRoot /var/www/dns-gudtek.lol
+
+    <Directory /var/www/dns-gudtek.lol>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+
+        RewriteEngine On
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteRule ^ index.php [L,QSA]
+    </Directory>
+
+    # SSL Configuration
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/yourdomain.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/yourdomain.com/privkey.pem
+    Include /etc/letsencrypt/options-ssl-apache.conf
+
+    # CORS for Solana/Phantom
+    <IfModule mod_headers.c>
+        Header set Access-Control-Allow-Origin "*"
+    </IfModule>
+
+    ErrorLog ${APACHE_LOG_DIR}/shortener_error.log
+    CustomLog ${APACHE_LOG_DIR}/shortener_access.log combined
+</VirtualHost>
+
+# HTTP to HTTPS redirect
+<VirtualHost *:80>
+    ServerName short.yourdomain.com
+    ServerAlias *.yourdomain.com
+
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
+</VirtualHost>
+```
+
+#### Enable Configuration
+
+```bash
+# Copy config to sites-available
+sudo cp wildcard-gudtek.conf /etc/apache2/sites-available/yourdomain-shortener.conf
+
+# Enable required modules
+sudo a2enmod rewrite headers ssl
+
+# Enable the site
+sudo a2ensite yourdomain-shortener.conf
 
 # Test configuration
 sudo apache2ctl configtest
@@ -60,167 +150,223 @@ sudo apache2ctl configtest
 sudo systemctl reload apache2
 ```
 
-**Option B: Create a separate subdomain (Recommended to avoid conflicts):**
+### 6. Obtain SSL Certificate
 
-Instead of using *.gudtek.lol, consider using a specific subdomain like `is.gudtek.lol` or `s.gudtek.lol`:
-
-1. Update DNS to point your chosen subdomain to this server
-2. Get SSL certificate: `sudo certbot --apache -d is.gudtek.lol -d *.is.gudtek.lol`
-3. Update the VirtualHost config accordingly
-
-**Current Situation:**
-- Your main `gudtek.lol` config points to `/var/www/gudtek.lol`
-- This service is in `/var/www/gudtek.lol/is`
-- You'll need to decide how to route traffic
-
-### 3. SSL Certificate (Required for Phantom Wallet)
-
-Phantom wallet requires HTTPS. For wildcard subdomains:
+Phantom wallet requires HTTPS. Obtain a wildcard SSL certificate:
 
 ```bash
-# Install certbot DNS plugin (for wildcard certs)
-sudo apt install python3-certbot-dns-cloudflare  # or your DNS provider
+# Using Certbot with DNS validation (recommended for wildcards)
+sudo certbot certonly --manual --preferred-challenges dns \
+  -d yourdomain.com -d *.yourdomain.com
 
-# Get wildcard certificate
-sudo certbot --apache -d gudtek.lol -d *.gudtek.lol --dns-cloudflare
-
-# Or for manual DNS verification
-sudo certbot --apache -d gudtek.lol -d *.gudtek.lol --manual --preferred-challenges dns
+# Or using Certbot with Apache (for specific subdomains)
+sudo certbot --apache -d short.yourdomain.com
 ```
 
-### 4. File Permissions
+Follow the prompts to complete DNS verification.
+
+### 7. Configure Admin Wallet
+
+Access the admin panel to set your admin wallet address:
+
+1. Open `https://short.yourdomain.com/admin.php`
+2. Connect your Phantom wallet
+3. The first connected wallet becomes the admin (or manually set in database)
+
+**Manual Configuration** (if needed):
 
 ```bash
-# Make sure Apache can write to the database
-sudo chown www-data:www-data /var/www/gudtek.lol/is/data.db
-sudo chmod 664 /var/www/gudtek.lol/is/data.db
+sqlite3 data.db "UPDATE config SET value = 'YOUR_WALLET_ADDRESS' WHERE key = 'admin_wallet';"
 ```
 
-### 5. Admin Panel Access
+### 8. Configure Pricing
 
-Access the admin panel at: `https://gudtek.lol/is/admin.php`
+Set SOL and token pricing through the admin panel or directly:
 
-**Admin wallet:** `819ywRTzmw3Gfei4UgBbmw3FaNRVaPu8Npmz4bcRZFA6`
+```bash
+# Set SOL price (e.g., 0.025 SOL)
+sqlite3 data.db "UPDATE config SET value = '0.025' WHERE key = 'price_sol';"
 
-Only this wallet can:
-- Configure SOL and token pricing
-- Set custom token mint address
-- Moderate/delete redirects
-- View transaction history
+# Set token price (e.g., 10000 tokens)
+sqlite3 data.db "UPDATE config SET value = '10000' WHERE key = 'price_token';"
 
-### 6. Configure Your Token (Optional)
-
-1. Go to `https://gudtek.lol/is/admin.php`
-2. Connect with admin wallet
-3. Enter your SPL token mint address
-4. Set token pricing
-
-### 7. Testing
-
-**Test the main page:**
-```
-https://gudtek.lol/is/
-```
-
-**Test redirect (after creating one):**
-```
-https://yourslug.gudtek.lol
-```
-
-**Test admin panel:**
-```
-https://gudtek.lol/is/admin.php
+# Set SPL token mint address (optional)
+sqlite3 data.db "UPDATE config SET value = 'YOUR_TOKEN_MINT_ADDRESS' WHERE key = 'token_mint';"
 ```
 
 ## Usage
 
-### For Users:
+### For End Users
 
-1. Visit the site and connect Phantom wallet
-2. Enter desired slug (e.g., "moon" for moon.gudtek.lol)
-3. Enter target URL
-4. Pay with SOL or token
-5. Your redirect is live instantly!
+1. Navigate to `https://short.yourdomain.com`
+2. Connect Phantom wallet
+3. Enter desired slug (e.g., "moon" → `moon.yourdomain.com`)
+4. Enter target URL to redirect to
+5. Pay with SOL or custom token
+6. Redirect is active immediately
 
-### For Admin:
+### For Administrators
 
-1. Access admin.php with the admin wallet
-2. Configure pricing and token settings
-3. Monitor transactions and redirects
-4. Delete spam/malicious redirects
-
-## Important Notes
-
-⚠️ **Apache Configuration Conflict**
-
-Your existing `gudtek.lol-le-ssl.conf` serves the main domain. You need to decide:
-
-1. **Keep main site separate**: Use a specific subdomain like `is.gudtek.lol` or `s.gudtek.lol` for this service
-2. **Integrate**: Modify the main config to route certain paths/subdomains to this service
-3. **Replace**: Make this the primary handler (not recommended if you have other content)
-
-⚠️ **Security Considerations**
-
-- Validate all URLs to prevent open redirects to malicious sites
-- Consider implementing rate limiting
-- Monitor for abuse (phishing, malware distribution)
-- The admin wallet check is simple - consider adding signature verification
-
-⚠️ **Payment Processing**
-
-The current implementation uses direct wallet transfers. For production:
-- Implement proper transaction verification
-- Add confirmation waiting
-- Handle failed transactions
-- Consider using a payment processor service
+Access the admin panel at `https://short.yourdomain.com/admin.php` to:
+- Configure pricing and accepted tokens
+- View all active redirects
+- Delete spam or malicious redirects
+- Monitor transaction history
+- Update system settings
 
 ## Customization
 
-### Change CRT Colors
+### Change UI Theme Colors
 
-Edit the CSS variables in `index.php`:
+Edit CSS variables in `index.php` (around line 50):
+
 ```css
 :root {
-    --crt-green: #0f0;  /* Change to any color */
-    --crt-dark: #001a00;
-    --crt-glow: rgba(0, 255, 0, 0.3);
+    --crt-green: #0f0;              /* Primary color */
+    --crt-dark: #001a00;            /* Background */
+    --crt-glow: rgba(0, 255, 0, 0.3); /* Glow effect */
 }
 ```
 
-### Add Sponsors
+### Modify Pricing Dynamically
 
-Edit the sponsor boxes in `index.php` around line 400:
-```html
-<div class="sponsor-box">YOUR SPONSOR</div>
-```
+Use the admin panel or update the database:
 
-### Adjust Pricing
-
-Use the admin panel or directly update the database:
 ```bash
 sqlite3 data.db "UPDATE config SET value = '0.05' WHERE key = 'price_sol';"
 ```
 
+### Add Sponsor Content
+
+Edit sponsor sections in `index.php` (search for "sponsor-box"):
+
+```html
+<div class="sponsor-box">
+    Your sponsor content here
+</div>
+```
+
+## API Endpoints
+
+### Public API (`api.php`)
+
+- **POST /api.php?action=create_redirect** - Create new redirect (requires payment)
+- **GET /api.php?action=check_slug&slug=xxx** - Check slug availability
+- **POST /api.php?action=record_transaction** - Record blockchain transaction
+
+### Admin API (`admin_api.php`)
+
+- **GET /admin_api.php?action=get_redirects** - List all redirects
+- **POST /admin_api.php?action=delete_redirect** - Delete a redirect
+- **GET /admin_api.php?action=get_stats** - Get system statistics
+- **POST /admin_api.php?action=update_config** - Update configuration
+
+All admin endpoints require admin wallet authentication.
+
+## Security Considerations
+
+### Production Deployment Checklist
+
+- [ ] Implement URL validation to prevent malicious redirects
+- [ ] Add rate limiting to prevent abuse
+- [ ] Implement transaction verification (currently not validated)
+- [ ] Add CAPTCHA or proof-of-work for spam prevention
+- [ ] Enable admin signature verification
+- [ ] Set up monitoring for malicious content
+- [ ] Configure firewall rules
+- [ ] Regular database backups
+- [ ] Implement logging and audit trails
+
+### Current Limitations
+
+- **No transaction verification**: Payments are not verified on-chain
+- **Simple admin auth**: Only wallet address matching (no signature verification)
+- **No rate limiting**: Vulnerable to spam/abuse
+- **No URL validation**: Could be used for phishing/malware distribution
+
+**This is a proof-of-concept implementation. Production use requires additional security hardening.**
+
 ## Troubleshooting
 
-**Redirects not working?**
-- Check Apache rewrite module is enabled
-- Verify DNS points to server
-- Check database for the redirect entry
+### Redirects Not Working
 
-**Wallet won't connect?**
-- Must use HTTPS
-- Check browser console for errors
-- Verify Phantom extension is installed
+- Verify Apache `mod_rewrite` is enabled: `sudo a2enmod rewrite`
+- Check DNS propagation: `dig slug.yourdomain.com`
+- Review Apache error logs: `tail -f /var/log/apache2/shortener_error.log`
+- Verify database entry exists: `sqlite3 data.db "SELECT * FROM redirects;"`
 
-**Admin panel access denied?**
-- Make sure you're using the exact admin wallet address
-- Check browser console for connection issues
+### Phantom Wallet Won't Connect
 
-**Database errors?**
-- Check file permissions on data.db
-- Ensure SQLite3 PHP extension is installed
+- Ensure site is served over HTTPS (Phantom requires SSL)
+- Check browser console for errors (F12)
+- Verify Phantom extension is installed and unlocked
+- Try clearing browser cache/cookies
+
+### Admin Panel Access Denied
+
+- Confirm you're connecting with the admin wallet address
+- Check `config` table: `sqlite3 data.db "SELECT * FROM config WHERE key = 'admin_wallet';"`
+- Review browser console for connection issues
+
+### Database Permission Errors
+
+- Verify file ownership: `ls -l data.db`
+- Should be owned by web server user (www-data, nginx, etc.)
+- Check permissions: `chmod 664 data.db`
+
+### SSL Certificate Issues
+
+- Verify certificate paths in Apache config
+- Check certificate expiration: `openssl x509 -in /path/to/cert.pem -noout -dates`
+- Renew certificates: `sudo certbot renew`
+
+## File Structure
+
+```
+.
+├── index.php              # Main frontend + redirect handler
+├── app.js                 # Phantom wallet integration & client-side logic
+├── api.php                # Public API endpoints
+├── admin.php              # Admin panel UI
+├── admin_api.php          # Admin API endpoints
+├── init_db.php            # Database initialization script
+├── data.db                # SQLite database (created after init)
+├── wildcard-gudtek.conf   # Example Apache configuration
+├── distro/                # Distribution system (optional)
+└── SETUP.md               # This file
+```
+
+## Requirements
+
+### PHP Extensions
+
+```bash
+# Verify required extensions are installed
+php -m | grep -E "sqlite3|pdo_sqlite|json|curl"
+
+# Install if missing (Ubuntu/Debian)
+sudo apt install php-sqlite3 php-curl php-json
+```
+
+### Apache Modules
+
+```bash
+# Verify required modules
+apache2ctl -M | grep -E "rewrite|headers|ssl"
+
+# Enable if missing
+sudo a2enmod rewrite headers ssl
+sudo systemctl restart apache2
+```
+
+## License
+
+This project is provided as-is for educational and commercial use. Review code before deploying to production.
+
+## Contributing
+
+Contributions welcome! Please submit pull requests or open issues for bugs and feature requests.
 
 ## Support
 
-Built with ❤️ and green phosphor.
+For issues and questions, please open a GitHub issue or refer to the troubleshooting section above.
