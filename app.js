@@ -29,12 +29,13 @@ function calculateDomainPrice(slug) {
     const solAmount = baseSolPrice * multiplier;
 
     // Calculate token amount based on USD equivalent
+    // 50% discount for token payments
     let tokenAmount;
     if (solPrice > 0 && tokenPrice > 0) {
         const solValueUsd = solAmount * solPrice;
-        tokenAmount = Math.floor(solValueUsd / tokenPrice);
+        tokenAmount = Math.floor((solValueUsd / tokenPrice) * 0.5);
     } else {
-        tokenAmount = baseTokenPrice * multiplier;
+        tokenAmount = (baseTokenPrice * multiplier) * 0.5;
     }
 
     return {

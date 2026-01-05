@@ -54,11 +54,23 @@ function createCheckoutSession() {
     $row = $result->fetchArray();
     $price_sol = floatval($row['value'] ?? 0.025);
 
+    // Calculate multiplier based on slug length
+    $slug_length = strlen($slug);
+    $multiplier = 1;
+    if ($slug_length === 1) $multiplier = 10;
+    else if ($slug_length === 2) $multiplier = 5;
+    else if ($slug_length === 3) $multiplier = 4;
+    else if ($slug_length === 4) $multiplier = 3;
+    else if ($slug_length === 5) $multiplier = 2;
+
+    // Apply multiplier to SOL price
+    $price_sol_with_multiplier = $price_sol * $multiplier;
+
     // Fetch live SOL price in USD
     $sol_price_usd = fetchSolPrice();
 
-    // Calculate USD value based on SOL amount (e.g., 0.025 SOL * $200 = $5.00)
-    $price_usd_dollars = $price_sol * $sol_price_usd;
+    // Calculate USD value based on SOL amount (e.g., 0.025 SOL * 10x * $200 = $50.00)
+    $price_usd_dollars = $price_sol_with_multiplier * $sol_price_usd;
 
     // Convert to cents
     $price_usd = round($price_usd_dollars * 100);
