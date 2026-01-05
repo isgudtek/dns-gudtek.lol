@@ -976,7 +976,7 @@ async function purchaseWithStripe() {
     const targetUrl = document.getElementById('urlInput').value.trim();
 
     if (!slug || !targetUrl) {
-        showMessage('Please fill in both domain name and target URL', 'error');
+        showStatus('Please fill in both domain name and target URL', 'error');
         return;
     }
 
@@ -984,11 +984,11 @@ async function purchaseWithStripe() {
     try {
         new URL(targetUrl);
     } catch (e) {
-        showMessage('Please enter a valid URL (include http:// or https://)', 'error');
+        showStatus('Please enter a valid URL (include http:// or https://)', 'error');
         return;
     }
 
-    showMessage('Redirecting to Stripe checkout...', 'success');
+    showStatus('Redirecting to Stripe checkout...', 'success');
 
     try {
         const response = await fetch('stripe_payment.php?action=create_checkout', {
@@ -1006,11 +1006,11 @@ async function purchaseWithStripe() {
             // Redirect to Stripe Checkout
             window.location.href = data.url;
         } else {
-            showMessage('Error: ' + (data.error || 'Failed to create checkout session'), 'error');
+            showStatus('Error: ' + (data.error || 'Failed to create checkout session'), 'error');
         }
     } catch (error) {
         console.error('Stripe error:', error);
-        showMessage('Error creating checkout session', 'error');
+        showStatus('Error creating checkout session', 'error');
     }
 }
 
@@ -1027,7 +1027,7 @@ window.addEventListener('load', async function() {
             const data = await response.json();
 
             if (data.success && data.paid) {
-                showMessage(`✓ Payment successful! Your redirect ${data.slug}.gudtek.lol is now live!`, 'success');
+                showStatus(`✓ Payment successful! Your redirect ${data.slug}.gudtek.lol is now live!`, 'success');
                 // Clear URL parameters
                 window.history.replaceState({}, document.title, window.location.pathname);
                 // Refresh redirects list
@@ -1039,7 +1039,7 @@ window.addEventListener('load', async function() {
             console.error('Payment verification error:', error);
         }
     } else if (payment === 'cancelled') {
-        showMessage('Payment was cancelled', 'error');
+        showStatus('Payment was cancelled', 'error');
         // Clear URL parameters
         window.history.replaceState({}, document.title, window.location.pathname);
     }
