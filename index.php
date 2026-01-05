@@ -725,6 +725,7 @@ if (count($parts) >= 3) {
             text-shadow: 0 0 10px var(--crt-glow);
         }
     </style>
+    <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
     <!-- Tek Loading Banner -->
@@ -816,6 +817,7 @@ if (count($parts) >= 3) {
                 <label>Payment Method:</label>
                 <button id="paySolBtn">PAY WITH SOL</button>
                 <button id="payTokenBtn">PAY WITH TOKEN</button>
+                <button id="payStripeBtn" style="background: linear-gradient(135deg, #635bff, #5469d4); border: 2px solid #635bff;">PAY WITH CARD 💳</button>
             </div>
 
             <div id="statusMsg" class="status-msg"></div>

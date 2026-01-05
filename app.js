@@ -218,6 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('slugInput').addEventListener('input', checkSlugAvailability);
     document.getElementById('paySolBtn').addEventListener('click', () => purchaseSlug('sol'));
     document.getElementById('payTokenBtn').addEventListener('click', () => purchaseSlug('token'));
+    document.getElementById('payStripeBtn').addEventListener('click', () => purchaseWithStripe());
 
     // Hero availability checker
     document.getElementById('heroSlugInput').addEventListener('input', checkHeroAvailability);
@@ -299,18 +300,25 @@ function updatePriceDisplay() {
 
         const tokenValueUsd = calculatedTokenAmount * tokenPrice;
 
+        const stripePrice = Math.max(0.50, solAmount).toFixed(2);
+
         document.getElementById('priceInfo').innerHTML = `
             <strong>Pricing from:</strong><br>
             ${solAmount} SOL (≈ $${solValueUsd.toFixed(2)} USD)<br>
             <em style="opacity: 0.8; font-size: 0.9rem;">or</em><br>
-            ${calculatedTokenAmount.toLocaleString()} TOKEN (≈ $${tokenValueUsd.toFixed(2)} USD)
+            ${calculatedTokenAmount.toLocaleString()} TOKEN (≈ $${tokenValueUsd.toFixed(2)} USD)<br>
+            <em style="opacity: 0.8; font-size: 0.9rem;">or</em><br>
+            <span style="color: #635bff;">$${stripePrice} USD via Card 💳</span>
         `;
 
         console.log('Calculated token amount:', calculatedTokenAmount);
     } else {
+        const stripePrice = Math.max(0.50, solAmount).toFixed(2);
         document.getElementById('priceInfo').innerHTML = `
             <strong>Pricing from:</strong><br>
             ${solAmount} SOL or ${tokenAmountConfig} TOKEN<br>
+            <em style="opacity: 0.8; font-size: 0.9rem;">or</em><br>
+            <span style="color: #635bff;">$${stripePrice} USD via Card 💳</span><br>
             <em style="opacity: 0.7; font-size: 0.85rem;">Fetching live prices...</em>
         `;
     }
@@ -960,6 +968,81 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// Stripe payment function
+async function purchaseWithStripe() {
+    const slug = document.getElementById('slugInput').value.trim();
+    const targetUrl = document.getElementById('urlInput').value.trim();
+
+    if (!slug || !targetUrl) {
+        showMessage('Please fill in both domain name and target URL', 'error');
+        return;
+    }
+
+    // Validate URL
+    try {
+        new URL(targetUrl);
+    } catch (e) {
+        showMessage('Please enter a valid URL (include http:// or https://)', 'error');
+        return;
+    }
+
+    showMessage('Redirecting to Stripe checkout...', 'success');
+
+    try {
+        const response = await fetch('stripe_payment.php?action=create_checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                slug: slug,
+                target_url: targetUrl
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.url) {
+            // Redirect to Stripe Checkout
+            window.location.href = data.url;
+        } else {
+            showMessage('Error: ' + (data.error || 'Failed to create checkout session'), 'error');
+        }
+    } catch (error) {
+        console.error('Stripe error:', error);
+        showMessage('Error creating checkout session', 'error');
+    }
+}
+
+// Check for Stripe payment success on page load
+window.addEventListener('load', async function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const payment = urlParams.get('payment');
+    const sessionId = urlParams.get('session_id');
+
+    if (payment === 'success' && sessionId) {
+        // Verify payment with backend
+        try {
+            const response = await fetch(`stripe_payment.php?action=verify_payment&session_id=${sessionId}`);
+            const data = await response.json();
+
+            if (data.success && data.paid) {
+                showMessage(`✓ Payment successful! Your redirect ${data.slug}.gudtek.lol is now live!`, 'success');
+                // Clear URL parameters
+                window.history.replaceState({}, document.title, window.location.pathname);
+                // Refresh redirects list
+                if (typeof loadMyDomains === 'function') {
+                    loadMyDomains();
+                }
+            }
+        } catch (error) {
+            console.error('Payment verification error:', error);
+        }
+    } else if (payment === 'cancelled') {
+        showMessage('Payment was cancelled', 'error');
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+});
 
 // Contact message functionality
 document.addEventListener('DOMContentLoaded', function() {
