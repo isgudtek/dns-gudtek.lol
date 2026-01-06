@@ -1,0 +1,22 @@
+{
+  "name": "gudtek-domain-nfts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Compressed NFT minting for gudtek.lol domains",
+  "scripts": {
+    "mint": "npx ts-node mint_domain.ts"
+  },
+  "dependencies": {
+    "@metaplex-foundation/mpl-bubblegum": "^0.2.0",
+    "@solana/spl-account-compression": "^0.1.7",
+    "@solana/web3.js": "^1.73.4",
+    "bn.js": "^5.2.2",
+    "bs58": "^5.0.0",
+    "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.1.6",
+    "@types/node": "^22.15.29",
+    "typescript": "^5.8.3"
+  }
+}

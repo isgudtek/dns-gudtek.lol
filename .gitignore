@@ -1,0 +1,30 @@
+# Database
+data.db
+*.db
+
+# Backups
+*.tar.gz
+backup_*
+
+# Claude directory
+.claude/
+
+# Environment files (if any)
+.env
+.env.local
+stripe_config.php
+sol_price_cache.json
+
+# Dependencies
+node_modules/
+vendor/
+
+# Distribution system with private keys
+distro/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
